@@ -1,0 +1,46 @@
+version: '3'
+services:
+
+  mongodb:
+    image: mongo
+    container_name: 'mongodb'
+    ports:
+      - 27019:27017
+  
+  tweet_collector:
+    build: tweet_collector/
+    container_name: 'tweet_collector'
+    volumes:
+      - ./tweet_collector/:/app
+    depends_on:
+      - mongodb   
+  
+  postgresdb:
+    image: postgres
+    container_name: 'postgres'
+    ports:
+      - 5556:5432
+
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=tweets
+
+  etl:
+    build: etl/
+    container_name: 'etl'
+    volumes:
+      - ./etl/:/app
+    depends_on:
+      - mongodb
+      - postgresdb
+      - tweet_collector
+  # 5. Container Python_SlackBot_Script
+  slackbot:
+    build: slackbot/
+    container_name: 'slackbot'
+    volumes:
+      - ./slackbot/:/app
+    depends_on: # This reads from postgres thus requires postgres to run
+      - postgresdb
+      - etl
